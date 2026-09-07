@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 </head>
 <body>
 <div class="app-shell">
@@ -24,6 +25,7 @@
       <div class="navlinks">
         <div class="navlink active" data-view="overview">Overview</div>
         <div class="navlink" data-view="simulation">Simulation</div>
+        <div class="navlink" data-view="infrastructure">3D Infrastructure</div>
         <div class="navlink" data-view="architecture">Architecture</div>
       </div>
     </div>
@@ -149,6 +151,80 @@
       </div>
     </section>
 
+    <!-- ================= 3D INFRASTRUCTURE ================= -->
+    <section class="view" id="view-infrastructure">
+      <div class="page-eyebrow">Live infrastructure view</div>
+      <h1 class="page-title">3D Infrastructure Visualization</h1>
+      <p class="page-lede">
+        The same recovery pipeline shown above, rendered as a technical infrastructure diagram.
+        Every color and transition here is read directly from the simulation run below it -- this
+        view computes nothing of its own.
+      </p>
+
+      <div class="panel row-gap">
+        <div class="panel-pad scene3d-controls-bar">
+          <div class="scene3d-control-group">
+            <label for="scene3dScenario">Scenario</label>
+            <select id="scene3dScenario"></select>
+          </div>
+          <div class="scene3d-control-group scene3d-buttons">
+            <button class="btn-run" id="btnScene3dRun">Run</button>
+            <button class="btn-secondary" id="btnScene3dPlay">▶ Play</button>
+            <button class="btn-secondary" id="btnScene3dPause" disabled>⏸ Pause</button>
+            <button class="btn-secondary" id="btnScene3dReset">↺ Reset</button>
+          </div>
+          <div class="scene3d-step-status" id="scene3dStepStatus">Select a scenario and press Run.</div>
+        </div>
+      </div>
+
+      <div class="panel row-gap">
+        <div class="scene3d-stage">
+          <div class="scene3d-flow-strip">
+            <span>AI TRAINING HOSTS</span><i>&rarr;</i>
+            <span>CHECKPOINT SHARDS</span><i>&rarr;</i>
+            <span>SSD CLUSTER</span><i>&rarr;</i>
+            <span>SSD FIRMWARE / FTL</span><i>&rarr;</i>
+            <span>BMC / NVMe-MI</span><i>&rarr;</i>
+            <span>WITNESS COORDINATOR</span><i>&rarr;</i>
+            <span>CHECKPOINT COMMITTED</span>
+          </div>
+          <div class="scene3d-canvas-wrap" id="scene3dCanvasWrap"></div>
+          <div class="scene3d-fallback" id="scene3dFallback" style="display:none;">
+            <div class="fallback-note">WebGL is unavailable in this browser -- showing the 2D pipeline fallback instead.</div>
+            <div class="pipeline" id="scene3dFallbackPipeline"></div>
+          </div>
+          <div class="scene3d-honesty-label">Visualization of the WITNESS discrete-event simulation -- not a physical SSD measurement</div>
+          <div class="scene3d-legend">
+            <span><i class="dot-key" style="background:#9aa3af"></i>Pending</span>
+            <span><i class="dot-key" style="background:#1655c9"></i>Active / in-band</span>
+            <span><i class="dot-key" style="background:#b07a12"></i>Out-of-band (BMC/NVMe-MI)</span>
+            <span><i class="dot-key" style="background:#1a7f4b"></i>Sealed / online</span>
+            <span><i class="dot-key" style="background:#b0281f"></i>Failed / unreachable</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2 row-gap">
+        <div class="panel panel-pad">
+          <div class="section-title">Node Inspector</div>
+          <div id="scene3dNodePanel" class="scene3d-node-panel">
+            <div class="event-empty">Click any host, SSD, or BMC block in the scene to inspect it.</div>
+          </div>
+        </div>
+        <div class="panel panel-pad">
+          <div class="section-title">Recovery Event Log</div>
+          <div class="event-log" id="scene3dEventLog" style="max-height:300px;"></div>
+        </div>
+      </div>
+
+      <div class="panel panel-pad">
+        <div class="disclaimer" style="margin-top:0;">
+          Latency and verdict values shown elsewhere in this dashboard are modeled discrete-event
+          simulation results, not physical SSD measurements.
+        </div>
+      </div>
+    </section>
+
     <!-- ================= ARCHITECTURE ================= -->
     <section class="view" id="view-architecture">
       <div class="page-eyebrow">Scope &amp; provenance</div>
@@ -190,8 +266,12 @@
   </div>
 
   <div class="panel row-gap">
-    <div class="panel-pad">
-      <div class="pipeline" id="pipelinePresent" style="transform: scale(1.02);"></div>
+    <div class="scene3d-stage present-stage">
+      <div class="scene3d-canvas-wrap" id="scene3dCanvasWrapPresent"></div>
+      <div class="scene3d-fallback" id="scene3dFallbackPresent" style="display:none;">
+        <div class="pipeline" id="pipelinePresent" style="transform: scale(1.02);"></div>
+      </div>
+      <div class="scene3d-honesty-label">Visualization of the WITNESS discrete-event simulation</div>
     </div>
   </div>
 
@@ -208,6 +288,7 @@
   </div>
 </div>
 
+<script src="/scene3d.js"></script>
 <script src="/app.js"></script>
 </body>
 </html>

@@ -334,9 +334,15 @@ function renderStatusStrip(el, runData) {
 /* View wiring                                                             */
 /* ---------------------------------------------------------------------- */
 
+let infraScene = null;
+
 function switchView(id) {
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + id));
   document.querySelectorAll(".navlink").forEach(n => n.classList.toggle("active", n.dataset.view === id));
+  if (infraScene) {
+    if (id === "infrastructure") { infraScene.resize(); infraScene.start(); }
+    else infraScene.stop();
+  }
 }
 
 document.querySelectorAll(".navlink").forEach(n => n.addEventListener("click", () => switchView(n.dataset.view)));
@@ -432,6 +438,108 @@ async function initSimulationPage() {
 }
 
 /* ---------------------------------------------------------------------- */
+/* 3D Infrastructure page                                                  */
+/*                                                                          */
+/* This view renders the SAME run object every other view uses (the       */
+/* backend's /api/run/{scenario} response). It fabricates no new verdicts */
+/* or states -- WitnessScene3D only reads run.nodes[] / run.events[] and  */
+/* decides when to reveal each node's already-known outcome.              */
+/* ---------------------------------------------------------------------- */
+
+let infraRunData = null;
+
+function renderScene3DNodePanel(el, nodeData, nodeId, extra) {
+  if (extra && extra.kind) {
+    const run = extra.run;
+    if (!run) { el.innerHTML = `<div class="event-empty">No run yet.</div>`; return; }
+    const title = extra.kind === "coordinator" ? "WITNESS COORDINATOR" : "CHECKPOINT COMMIT LOG";
+    const rows = extra.kind === "coordinator"
+      ? [["Verdict", run.verdict, run.committed ? "ok" : "bad"],
+         ["Simulated latency", fmtMs(run.latency_ms), "neutral"]]
+      : [["Committed generation", run.committed_generation ?? "None", "neutral"],
+         ["Verdict", run.verdict, run.committed ? "ok" : "bad"]];
+    el.innerHTML = `<div class="np-title">${title}</div>` +
+      rows.map(([k, v, cls]) => `<div class="np-row"><span class="np-k">${k}</span><span class="np-v ${cls}">${v}</span></div>`).join("");
+    return;
+  }
+  if (!nodeData) {
+    el.innerHTML = `<div class="event-empty">Click any host, SSD, or BMC block in the scene to inspect it.</div>`;
+    return;
+  }
+  const gen = infraRunData && infraRunData.runs.witness ? infraRunData.runs.witness.generation : "--";
+  const rows = [
+    ["SSD status", nodeData.ssd_powered ? "ONLINE" : "OFFLINE", nodeData.ssd_powered ? "ok" : "bad"],
+    ["Generation", gen, "neutral"],
+    ["Seal state", nodeData.seal_status, nodeData.seal_status === "SEALED" ? "ok" : "neutral"],
+    ["Shard status", nodeData.shard_status, nodeData.shard_status === "SEALED" ? "ok" : (nodeData.shard_status === "FAILED" ? "bad" : "neutral")],
+    ["Management", "NVMe-MI", "neutral"],
+    ["Host CPU / OS", nodeData.host_alive ? "ONLINE" : "UNREACHABLE", nodeData.host_alive ? "ok" : "bad"],
+    ["BMC", nodeData.bmc_reachable ? "ONLINE" : "UNREACHABLE", nodeData.bmc_reachable ? "ok" : "bad"],
+  ];
+  el.innerHTML = `<div class="np-title">${nodeId.toUpperCase()}</div>` +
+    rows.map(([k, v, cls]) => `<div class="np-row"><span class="np-k">${k}</span><span class="np-v ${cls}">${v}</span></div>`).join("");
+}
+
+function scene3dButtonsSetPlaying(playing) {
+  document.getElementById("btnScene3dPlay").disabled = playing;
+  document.getElementById("btnScene3dPause").disabled = !playing;
+}
+
+function scene3dSetStatus(step, index, total) {
+  const el = document.getElementById("scene3dStepStatus");
+  if (!el) return;
+  if (!total) { el.textContent = "Select a scenario and press Run."; return; }
+  if (index < 0) { el.textContent = `Ready -- ${total} recorded steps from this run. Press Play.`; return; }
+  el.textContent = `Step ${index + 1}/${total}: ${step.message}`;
+}
+
+async function initInfrastructurePage() {
+  const select = document.getElementById("scene3dScenario");
+  select.innerHTML = SCENARIOS.map(s => `<option value="${s.id}">${s.name}</option>`).join("");
+  select.value = "host_hang";
+
+  infraScene = new WitnessScene3D(document.getElementById("scene3dCanvasWrap"), {
+    stepDelayMs: 650,
+    onNodeClick: (nodeData, nodeId, extra) => {
+      renderScene3DNodePanel(document.getElementById("scene3dNodePanel"), nodeData, nodeId,
+        extra ? { kind: extra.kind, run: infraRunData && infraRunData.runs.witness } : null);
+    },
+    onStep: scene3dSetStatus,
+    onPlayState: (playing) => scene3dButtonsSetPlaying(playing),
+  });
+
+  if (!infraScene.available) {
+    document.getElementById("scene3dCanvasWrap").style.display = "none";
+    document.getElementById("scene3dFallback").style.display = "block";
+  }
+
+  async function runInfraScenario() {
+    const id = select.value;
+    const btn = document.getElementById("btnScene3dRun");
+    btn.disabled = true;
+    try {
+      const data = await getJSON(`/api/run/${id}`);
+      infraRunData = data;
+      infraScene.loadRun(data);
+      renderEventLog(document.getElementById("scene3dEventLog"), data.runs, { animate: false });
+      renderScene3DNodePanel(document.getElementById("scene3dNodePanel"), null, null, null);
+      if (!infraScene.available) {
+        renderPipeline(document.getElementById("scene3dFallbackPipeline"), data.runs.witness.events, { animate: true });
+      }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById("btnScene3dRun").addEventListener("click", runInfraScenario);
+  document.getElementById("btnScene3dPlay").addEventListener("click", () => infraScene.play());
+  document.getElementById("btnScene3dPause").addEventListener("click", () => infraScene.pause());
+  document.getElementById("btnScene3dReset").addEventListener("click", () => infraScene.reset());
+
+  await runInfraScenario();
+}
+
+/* ---------------------------------------------------------------------- */
 /* Architecture page                                                       */
 /* ---------------------------------------------------------------------- */
 
@@ -468,8 +576,27 @@ async function loadArchitecture() {
 /* Presentation mode                                                       */
 /* ---------------------------------------------------------------------- */
 
-function enterPresent() { document.body.classList.add("presenting"); }
-function exitPresent() { document.body.classList.remove("presenting"); }
+let presentScene = null;
+
+function ensurePresentScene() {
+  if (presentScene) return presentScene;
+  presentScene = new WitnessScene3D(document.getElementById("scene3dCanvasWrapPresent"), { stepDelayMs: 420 });
+  if (!presentScene.available) {
+    document.getElementById("scene3dFallbackPresent").style.display = "block";
+  }
+  return presentScene;
+}
+
+function enterPresent() {
+  document.body.classList.add("presenting");
+  ensurePresentScene();
+  presentScene.resize();
+  presentScene.start();
+}
+function exitPresent() {
+  document.body.classList.remove("presenting");
+  if (presentScene) presentScene.stop();
+}
 
 async function runPresentScenarioB() {
   const btn = document.getElementById("btnPresentRun");
@@ -477,10 +604,16 @@ async function runPresentScenarioB() {
   btn.textContent = "Running…";
   try {
     const data = await getJSON("/api/run/host_hang");
-    renderPipeline(document.getElementById("pipelinePresent"), data.runs.witness.events, { animate: true });
     renderCompare(document.getElementById("compareGridPresent"), data.runs);
     renderSpeedup(document.getElementById("speedupBannerPresent"), data);
     renderEventLog(document.getElementById("eventLogPresent"), data.runs, { animate: true });
+    ensurePresentScene();
+    presentScene.loadRun(data);
+    if (presentScene.available) {
+      presentScene.play();
+    } else {
+      renderPipeline(document.getElementById("pipelinePresent"), data.runs.witness.events, { animate: true });
+    }
   } finally {
     btn.disabled = false;
     btn.textContent = "Run Scenario B";
@@ -508,5 +641,17 @@ document.getElementById("btnPresentRun").addEventListener("click", runPresentSce
   }
   await loadOverview();
   await initSimulationPage();
+  await initInfrastructurePage();
   await loadArchitecture();
 })();
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) {
+    if (infraScene) infraScene.stop();
+    if (presentScene) presentScene.stop();
+    return;
+  }
+  const activeView = document.querySelector(".view.active");
+  if (infraScene && activeView && activeView.id === "view-infrastructure") infraScene.start();
+  if (presentScene && document.body.classList.contains("presenting")) presentScene.start();
+});

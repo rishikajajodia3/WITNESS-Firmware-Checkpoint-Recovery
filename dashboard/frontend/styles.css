@@ -524,6 +524,151 @@ body.presenting .app-shell > main { display: none; }
 
 .present-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 22px; }
 
+/* ---------- 3D infrastructure view ---------- */
+
+.scene3d-controls-bar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.scene3d-control-group { display: flex; align-items: center; gap: 10px; }
+.scene3d-control-group label { font-size: 11.5px; font-weight: 700; color: var(--slate); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.scene3d-control-group select {
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  padding: 8px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--navy);
+  background: var(--white);
+  min-width: 220px;
+}
+
+.scene3d-buttons { gap: 8px; }
+
+.btn-secondary {
+  border: 1px solid var(--border-strong);
+  background: var(--white);
+  color: var(--navy);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 9px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.btn-secondary:hover:not(:disabled) { background: var(--slate-bg); }
+.btn-secondary:disabled { color: var(--slate-light); cursor: default; }
+
+.scene3d-step-status {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--blue-dark);
+  max-width: 420px;
+  text-align: right;
+}
+
+.scene3d-stage {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--white);
+  overflow: hidden;
+}
+
+.scene3d-flow-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.scene3d-flow-strip span {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--navy);
+  background: var(--white);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 5px 9px;
+  white-space: nowrap;
+}
+.scene3d-flow-strip i { color: var(--slate-light); font-style: normal; font-size: 12px; }
+
+.scene3d-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 460px;
+  background: linear-gradient(180deg, #fbfcfd, #f3f4f7);
+  cursor: grab;
+}
+.scene3d-canvas-wrap:active { cursor: grabbing; }
+.scene3d-canvas-wrap canvas { width: 100% !important; height: 100% !important; }
+
+.present-stage .scene3d-canvas-wrap { height: 480px; }
+
+.scene3d-label-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+.scene3d-label {
+  position: absolute;
+  top: 0; left: 0;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--slate);
+  pointer-events: none;
+}
+.scene3d-node-label { color: var(--navy); font-size: 10px; }
+
+.scene3d-honesty-label {
+  font-size: 10.5px;
+  color: var(--slate-light);
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  font-style: italic;
+}
+
+.scene3d-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  color: var(--slate);
+}
+.scene3d-legend .dot-key { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+.scene3d-fallback {
+  padding: 20px;
+}
+.scene3d-fallback .fallback-note {
+  font-size: 12px;
+  color: var(--amber);
+  background: var(--amber-tint);
+  border: 1px solid #f0dfa8;
+  border-radius: 5px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
+}
+
+.scene3d-node-panel { font-family: var(--mono); }
+.scene3d-node-panel .np-title { font-size: 15px; font-weight: 800; color: var(--navy); margin-bottom: 12px; font-family: "Inter", sans-serif; }
+.scene3d-node-panel .np-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+.scene3d-node-panel .np-row:last-child { border-bottom: none; }
+.scene3d-node-panel .np-row .np-k { color: var(--slate); font-family: "Inter", sans-serif; }
+.scene3d-node-panel .np-row .np-v { font-weight: 700; }
+.scene3d-node-panel .np-v.ok { color: var(--green); }
+.scene3d-node-panel .np-v.bad { color: var(--red); }
+.scene3d-node-panel .np-v.neutral { color: var(--navy); }
+
 footer.app-footer {
   text-align: center;
   font-size: 11.5px;
