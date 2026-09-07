@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WITNESS · Checkpoint Recovery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="app-shell">
+
+  <nav class="topnav">
+    <div style="display:flex; align-items:center;">
+      <div class="brand">
+        <div class="brand-mark">W</div>
+        <div class="brand-text">
+          <div class="brand-title">WITNESS</div>
+          <div class="brand-sub">Checkpoint Recovery</div>
+        </div>
+      </div>
+      <div class="navlinks">
+        <div class="navlink active" data-view="overview">Overview</div>
+        <div class="navlink" data-view="simulation">Simulation</div>
+        <div class="navlink" data-view="architecture">Architecture</div>
+      </div>
+    </div>
+    <div class="nav-right">
+      <div class="status-chip"><span class="dot pulse" id="apiDot"></span><span id="apiStatus">Simulation: ONLINE</span></div>
+      <div class="status-chip">Build: CheckpointLedger</div>
+      <button class="btn-present" id="btnPresent">Presentation Mode</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ================= OVERVIEW ================= -->
+    <section class="view active" id="view-overview">
+      <div class="page-eyebrow">Storage-aware checkpoint recovery</div>
+      <h1 class="page-title">WITNESS: Firmware-Assisted Checkpoint Recovery</h1>
+      <p class="page-lede">
+        WITNESS lets the coordinator verify checkpoint durability through the storage management
+        path when the training host becomes unreachable: a storage-aware recovery layer for
+        distributed AI training checkpoints.
+      </p>
+
+      <div class="status-strip" id="statusStrip"></div>
+
+      <div class="panel row-gap">
+        <div class="panel-pad">
+          <div class="section-title">Checkpoint Recovery Pipeline: Scenario B (Host OS/CPU Hang)</div>
+          <div class="pipeline" id="pipelineOverview"></div>
+          <div class="section-note">Stages illuminate in the order the real simulation actually resolves them. Replays the WITNESS run of Scenario B on load.</div>
+        </div>
+      </div>
+
+      <div class="grid-2 row-gap">
+        <div class="panel panel-pad">
+          <div class="section-title">Host Status: rank-0</div>
+          <div class="host-panel" id="hostPanel"></div>
+        </div>
+        <div class="panel panel-pad">
+          <div class="section-title">Checkpoint Shard Status</div>
+          <div id="donutWrap"></div>
+        </div>
+      </div>
+
+      <div class="panel row-gap">
+        <div class="panel-pad">
+          <div class="section-title">SSD Checkpoint Shards</div>
+          <div class="shard-grid" id="shardGridOverview"></div>
+        </div>
+      </div>
+
+      <div class="panel row-gap">
+        <div class="panel-pad">
+          <div class="section-title">Recovery Decision: Baseline vs. WITNESS</div>
+          <div class="compare-grid" id="compareGrid"></div>
+          <div class="speedup-banner" id="speedupBanner"></div>
+        </div>
+      </div>
+
+      <div class="grid-2 row-gap">
+        <div class="panel chart-card">
+          <div class="section-title">Recovery Decision Latency</div>
+          <div id="barChart"></div>
+          <div class="section-note">Scenario B: host OS/CPU hang, SSD + BMC alive. Simulation time.</div>
+        </div>
+        <div class="panel panel-pad">
+          <div class="section-title">Recovery Event Log</div>
+          <div class="event-log" id="eventLogOverview"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SIMULATION ================= -->
+    <section class="view" id="view-simulation">
+      <div class="page-eyebrow">Scenario Runner</div>
+      <h1 class="page-title">Simulation &amp; Scenarios</h1>
+      <p class="page-lede">
+        Run the same discrete-event simulation used to verify WITNESS's claims. Every result below
+        is produced live by the actual Python coordinator/FTL/BMC code, not pre-recorded.
+      </p>
+
+      <div class="scenario-picker" id="scenarioPicker"></div>
+      <div class="scenario-detail" id="scenarioDetail"></div>
+      <div class="run-controls">
+        <button class="btn-run" id="btnRun">Run Scenario</button>
+        <span class="run-status" id="runStatus">Ready.</span>
+      </div>
+
+      <div class="grid-2 row-gap">
+        <div class="panel panel-pad">
+          <div class="section-title">Host / Storage / Management State</div>
+          <div class="host-panel" id="hostPanelSim"></div>
+        </div>
+        <div class="panel panel-pad">
+          <div class="section-title">Checkpoint Shard Status</div>
+          <div id="donutWrapSim"></div>
+        </div>
+      </div>
+
+      <div class="panel row-gap">
+        <div class="panel-pad">
+          <div class="section-title">SSD Checkpoint Shards</div>
+          <div class="shard-grid" id="shardGridSim"></div>
+        </div>
+      </div>
+
+      <div class="panel row-gap">
+        <div class="panel-pad">
+          <div class="section-title">Recovery Decision</div>
+          <div class="compare-grid" id="compareGridSim"></div>
+          <div class="speedup-banner" id="speedupBannerSim" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="grid-2 row-gap">
+        <div class="panel chart-card">
+          <div class="section-title">Recovery Decision Latency</div>
+          <div id="barChartSim"></div>
+        </div>
+        <div class="panel panel-pad">
+          <div class="section-title">Recovery Event Log</div>
+          <div class="event-log" id="eventLogSim"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= ARCHITECTURE ================= -->
+    <section class="view" id="view-architecture">
+      <div class="page-eyebrow">Scope &amp; provenance</div>
+      <h1 class="page-title">Architecture</h1>
+      <p class="page-lede">
+        WITNESS is a firmware/architecture proposal validated through a discrete-event software
+        prototype, not a claim about existing NVMe-MI or FDP semantics, and not a claim of
+        running on real SSD hardware.
+      </p>
+
+      <div class="arch-columns" id="archColumns"></div>
+
+      <div class="panel">
+        <div class="panel-pad">
+          <div class="section-title">Technical Flow</div>
+          <div class="diagram" id="archDiagram"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    WITNESS: a software simulation of a proposed SSD firmware feature. No real NAND, SMBus, or NVMe-MI wire protocol is touched anywhere in this dashboard or its backend.
+  </footer>
+</div>
+
+<!-- ================= PRESENTATION MODE ================= -->
+<div class="present-overlay" id="presentOverlay">
+  <div class="present-head">
+    <div>
+      <div class="present-title">WITNESS: Scenario B, Host OS/CPU Hang</div>
+      <div class="present-sub">Firmware-Assisted Checkpoint Recovery for AI Training: discrete-event simulation</div>
+    </div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <button class="btn-run" id="btnPresentRun">Run Scenario B</button>
+      <button class="exit-present" id="btnExitPresent">Exit Presentation Mode</button>
+    </div>
+  </div>
+
+  <div class="panel row-gap">
+    <div class="panel-pad">
+      <div class="pipeline" id="pipelinePresent" style="transform: scale(1.02);"></div>
+    </div>
+  </div>
+
+  <div class="present-grid">
+    <div class="panel panel-pad">
+      <div class="section-title">Recovery Decision</div>
+      <div class="compare-grid" id="compareGridPresent"></div>
+      <div class="speedup-banner" id="speedupBannerPresent"></div>
+    </div>
+    <div class="panel panel-pad">
+      <div class="section-title">Recovery Event Log</div>
+      <div class="event-log" id="eventLogPresent" style="max-height: 460px;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
